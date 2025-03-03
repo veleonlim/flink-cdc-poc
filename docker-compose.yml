@@ -1,0 +1,61 @@
+version: "3.9"
+services:
+  jobmanager:
+    image: flink:1.19
+    container_name: flink-jobmanager
+    hostname: jobmanager
+    ports:
+      - "8081:8081" # Flink Web UI
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+    volumes:
+      - /Users/veleonlim/Downloads/flink-poc/flink-sql-connector-mysql-cdc-3.3.0.jar:/opt/flink/lib/flink-sql-connector-mysql-cdc-3.3.0.jar
+      - /Users/veleonlim/Downloads/flink-poc/mysql-connector-java-8.0.27.jar:/opt/flink/lib/mysql-connector-java-8.0.27.jar  # Add this line
+      - /Users/veleonlim/Downloads/flink-poc/flink-connector-jdbc-3.2.0-1.19.jar:/opt/flink/lib/flink-connector-jdbc-3.2.0-1.19.jar # Add this line
+      - /Users/veleonlim/Downloads/flink-poc/mysql-binlog-connector-java-0.30.1.jar:/opt/flink/lib/mysql-binlog-connector-java-0.30.1.jar
+
+  taskmanager:
+    image: flink:1.19
+    container_name: flink-taskmanager
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+    volumes:
+      - /Users/veleonlim/Downloads/flink-poc/flink-sql-connector-mysql-cdc-3.3.0.jar:/opt/flink/lib/flink-sql-connector-mysql-cdc-3.3.0.jar
+      - /Users/veleonlim/Downloads/flink-poc/mysql-connector-java-8.0.27.jar:/opt/flink/lib/mysql-connector-java-8.0.27.jar  # Add this line
+      - /Users/veleonlim/Downloads/flink-poc/flink-connector-jdbc-3.2.0-1.19.jar:/opt/flink/lib/flink-connector-jdbc-3.2.0-1.19.jar # Add this line
+      - /Users/veleonlim/Downloads/flink-poc/mysql-binlog-connector-java-0.30.1.jar:/opt/flink/lib/mysql-binlog-connector-java-0.30.1.jar
+  mysql-source:
+    image: mysql:8.0.41
+    container_name: mysql-source
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: flink
+      MYSQL_DATABASE: source_db
+      MYSQL_USER: flink
+      MYSQL_PASSWORD: flink
+    ports:
+      - "3307:3306" # Exposes MySQL on port 3307 to avoid conflicts
+    volumes:
+      - ./mysql_init/source_init.sql:/docker-entrypoint-initdb.d/source_init.sql
+
+  mysql-target:
+    image: mysql:8.0.41
+    container_name: mysql-target
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: flink
+      MYSQL_DATABASE: target_db
+      MYSQL_USER: flink
+      MYSQL_PASSWORD: flink
+    ports:
+      - "3308:3306" # Exposes MySQL on port 3308 to avoid conflicts
+    volumes:
+      - ./mysql_init/sink_init.sql:/docker-entrypoint-initdb.d/sink_init.sql
